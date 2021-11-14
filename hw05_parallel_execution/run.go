@@ -4,7 +4,6 @@ import (
 	//	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
@@ -18,11 +17,10 @@ func Run(tasks []Task, n, m int) error {
 	// Создаем канал тасков с буфером равным их кол-ву и заполняем его ими, канал потокобезопасен и поэтому воркеры легко разберут задачи.
 	chTsk := make(chan Task, len(tasks))
 	defer close(chTsk)
-	er := int32(m)
 	for _, v := range tasks {
 		chTsk <- v
 	}
-
+	mu := sync.Mutex{}
 	wg := sync.WaitGroup{}
 	//	ctx := context.Background()
 
@@ -33,15 +31,21 @@ func Run(tasks []Task, n, m int) error {
 
 		all:
 			for {
-				if er <= 0 {
+				mu.Lock()
+				if m <= 0 {
+					mu.Unlock()
 					return
 				}
+				mu.Unlock()
+
 				select {
 				case fn := <-chTsk:
 					{
 						err := fn()
 						if err != nil {
-							atomic.AddInt32(&er, -1)
+							mu.Lock()
+							m--
+							mu.Unlock()
 						}
 					}
 				default:
@@ -59,7 +63,7 @@ func Run(tasks []Task, n, m int) error {
 	// Place your code here.
 	// Возвращаем или nil или ошибку "ErrErrorsLimitExceeded"
 	wg.Wait()
-	if er <= 0 {
+	if m <= 0 {
 		return ErrErrorsLimitExceeded
 	}
 	return nil
