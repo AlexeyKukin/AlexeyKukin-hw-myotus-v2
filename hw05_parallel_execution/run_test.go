@@ -67,4 +67,9 @@ func TestRun(t *testing.T) {
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
+	// Дополнительные тесты
+	/*
+	   func Eventually(t TestingT, condition func() bool, waitFor time.Duration, tick time.Duration, msgAndArgs ...interface{})
+	   Eventually asserts that given condition will be met in waitFor time, periodically checking target function each tick.
+	*/
 }
