@@ -11,23 +11,22 @@ var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 type Task func() error
 
 // Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
-// Функция запускает n воркеров, которые исполняют задания пока не возникает m ошибок.
 func Run(tasks []Task, n, m int) error {
-	// Создаем канал тасков с буфером равным их кол-ву и заполняем его ими, канал потокобезопасен и поэтому воркеры
-	// легко разберут задачи.
+	// Создаем канал типа Task с буфером равным их кол-ву и заполняем его ими, канал потокобезопасен и поэтому
+	// воркеры легко разберут задачи из него не мешая друг другу.
 	chTsk := make(chan Task, len(tasks))
 	defer close(chTsk)
 	for _, v := range tasks {
 		chTsk <- v
 	}
+	// Для работы нам понадобится Mutex и Wait группа из пакета Sync.
 	mu := sync.Mutex{}
 	wg := sync.WaitGroup{}
-
+	// Делаем нужное количество воркеров
 	for i := 0; i <= n; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
 		all:
 			for {
 				mu.Lock()
@@ -36,7 +35,7 @@ func Run(tasks []Task, n, m int) error {
 					return
 				}
 				mu.Unlock()
-
+				// Воркер либо берет задание из канала, либо завершает свое существование.
 				select {
 				case fn := <-chTsk:
 					{
@@ -53,13 +52,11 @@ func Run(tasks []Task, n, m int) error {
 					}
 				}
 			}
-			//
 		}()
 	}
-
-	// Place your code here.
-	// Возвращаем или nil или ошибку "ErrErrorsLimitExceeded"
+	// Ожидаем пока все горутины остановятся из-за отсутствия заданий, или из-за превышения лимита ошибок.
 	wg.Wait()
+	// Возвращаем или nil или ошибку "ErrErrorsLimitExceeded"
 	if m <= 0 {
 		return ErrErrorsLimitExceeded
 	}
