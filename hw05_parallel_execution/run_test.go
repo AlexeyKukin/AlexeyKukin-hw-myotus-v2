@@ -69,7 +69,7 @@ func TestRun(t *testing.T) {
 	})
 	// Дополнительные тесты
 	/*
-	   func Eventually(t TestingT, condition func() bool, waitFor time.Duration, tick time.Duration, msgAndArgs ...interface{})
+	   func Eventually(t TestingT, conditionfunc() bool, waitFor time.Duration, tick time.Duration, msgAndArgs ...interface{})
 	   Eventually asserts that given condition will be met in waitFor time, periodically checking target function each tick.
 	*/
 }
