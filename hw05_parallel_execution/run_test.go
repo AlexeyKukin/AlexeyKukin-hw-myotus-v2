@@ -93,43 +93,48 @@ func TestRun(t *testing.T) {
 		close(testCh)
 	})
 
-	t.Run("Тест ошибок при m < 1. Ошибки игнорируются", func(t *testing.T) {
-		var runNegativeTasksCount int32
-		var runZerroTasksCount int32
-		tasksCount := 50
-		workersCount := 10
-		tasksNegative := make([]Task, 0, tasksCount)
-		tasksZerro := make([]Task, 0, tasksCount)
-		// Заполняем пул тасок. Все таски выдают ошибки. Подсчитываем кол-во запущенных тасок
-		for i := 0; i < tasksCount; i++ {
-			err := fmt.Errorf("error from task %d", i)
-			tasksNegative = append(tasksNegative, func() error {
-				atomic.AddInt32(&runNegativeTasksCount, 1)
-				return err
-			})
-		}
-		// Заполняем пул тасок. Все таски выдают ошибки. Подсчитываем кол-во запущенных тасок
-		for i := 0; i < tasksCount; i++ {
-			err := fmt.Errorf("error from task %d", i)
-			tasksZerro = append(tasksZerro, func() error {
-				atomic.AddInt32(&runZerroTasksCount, 1)
-				return err
-			})
-		}
-		//
+	t.Run("Тест ошибок при m < 1. Выдается ошибка ErrErrorsLimitExceeded и таски не запускаются",
+		func(t *testing.T) {
+			var runNegativeTasksCount int32
+			var runZerroTasksCount int32
+			tasksCount := 50
+			workersCount := 10
+			tasksNegative := make([]Task, 0, tasksCount)
+			tasksZerro := make([]Task, 0, tasksCount)
+			// Заполняем пул тасок. Все таски выдают ошибки. Подсчитываем кол-во запущенных тасок
+			for i := 0; i < tasksCount; i++ {
+				err := fmt.Errorf("error from task %d", i)
+				tasksNegative = append(tasksNegative, func() error {
+					atomic.AddInt32(&runNegativeTasksCount, 1)
+					return err
+				})
+			}
+			// Заполняем пул тасок. Все таски выдают ошибки. Подсчитываем кол-во запущенных тасок
+			for i := 0; i < tasksCount; i++ {
+				err := fmt.Errorf("error from task %d", i)
+				tasksZerro = append(tasksZerro, func() error {
+					atomic.AddInt32(&runZerroTasksCount, 1)
+					return err
+				})
+			}
+			//
 
-		maxErrorsCount := -123
-		errNegative := Run(tasksNegative, workersCount, maxErrorsCount)
+			maxErrorsCount := -123
+			errNegative := Run(tasksNegative, workersCount, maxErrorsCount)
 
-		maxErrorsCount = 0
-		errZerro := Run(tasksZerro, workersCount, maxErrorsCount)
+			maxErrorsCount = 0
+			errZerro := Run(tasksZerro, workersCount, maxErrorsCount)
 
-		fmt.Println(errNegative, runNegativeTasksCount)
-		fmt.Println(errZerro, runZerroTasksCount)
+			fmt.Println(errNegative, runNegativeTasksCount)
+			fmt.Println(errZerro, runZerroTasksCount)
 
-		require.Truef(t, (errors.Is(errNegative, ErrErrorsLimitExceeded)), "Негативное значение не выдает ошибку: ErrErrorsLimitExceeded Ошибка: %v", errNegative)
-		require.Truef(t, (runNegativeTasksCount == 0), "Негативное значение запускает задачи на исполнение:", runNegativeTasksCount)
-		require.Truef(t, (errors.Is(errZerro, ErrErrorsLimitExceeded)), "Нулевое значение не выдает ошибку: ErrErrorsLimitExceeded Ошибка: %v", errZerro)
-		require.Truef(t, (runZerroTasksCount == 0), "Нулевое значение запускает задачи на исполнение:", runZerroTasksCount)
-	})
+			require.Truef(t, (errors.Is(errNegative, ErrErrorsLimitExceeded)),
+				"Негативное значение не выдает ошибку: ErrErrorsLimitExceeded Ошибка: %v", errNegative)
+			require.Truef(t, (runNegativeTasksCount == 0),
+				"Негативное значение запускает задачи на исполнение:", runNegativeTasksCount)
+			require.Truef(t, (errors.Is(errZerro, ErrErrorsLimitExceeded)),
+				"Нулевое значение не выдает ошибку: ErrErrorsLimitExceeded Ошибка: %v", errZerro)
+			require.Truef(t, (runZerroTasksCount == 0),
+				"Нулевое значение запускает задачи на исполнение:", runZerroTasksCount)
+		})
 }
