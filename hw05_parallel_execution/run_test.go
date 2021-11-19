@@ -73,6 +73,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Concurrency test on require.Eventually", func(t *testing.T) {
 		var runTasksCount int32
+		errCh := make(chan error)
 		testCh := make(chan struct{})
 		tasksCount := 5
 		tasks := make([]Task, 0, tasksCount)
@@ -85,12 +86,26 @@ func TestRun(t *testing.T) {
 			})
 		}
 		go func() {
-			Run(tasks, tasksCount, 1)
+			errCh <- Run(tasks, tasksCount, 1)
 		}()
 
-		require.Eventually(t, func() bool { return atomic.LoadInt32(&runTasksCount) == 5 }, time.Second, time.Millisecond)
-
+		require.Eventually(t, func() bool { return atomic.LoadInt32(&runTasksCount) == 5 },
+			time.Second, time.Millisecond, "Задачи небыли запущены параллельно! должно быть 5, запущено:%v",
+			atomic.LoadInt32(&runTasksCount))
 		close(testCh)
+
+		var rErr error
+		require.Eventually(t, func() bool {
+			select {
+			case rErr = <-errCh:
+				return true
+			default:
+				return false
+			}
+		}, time.Second, time.Millisecond)
+
+		require.NoError(t, rErr)
+		close(errCh)
 	})
 
 	t.Run("Тест ошибок при m < 1. Выдается ошибка ErrErrorsLimitExceeded и таски не запускаются",
@@ -125,16 +140,13 @@ func TestRun(t *testing.T) {
 			maxErrorsCount = 0
 			errZerro := Run(tasksZerro, workersCount, maxErrorsCount)
 
-			fmt.Println(errNegative, runNegativeTasksCount)
-			fmt.Println(errZerro, runZerroTasksCount)
-
 			require.Truef(t, (errors.Is(errNegative, ErrErrorsLimitExceeded)),
 				"Негативное значение не выдает ошибку: ErrErrorsLimitExceeded Ошибка: %v", errNegative)
-			require.Truef(t, (runNegativeTasksCount == 0),
+			require.Truef(t, (atomic.LoadInt32(&runNegativeTasksCount) == 0),
 				"Негативное значение запускает задачи на исполнение:", runNegativeTasksCount)
 			require.Truef(t, (errors.Is(errZerro, ErrErrorsLimitExceeded)),
 				"Нулевое значение не выдает ошибку: ErrErrorsLimitExceeded Ошибка: %v", errZerro)
-			require.Truef(t, (runZerroTasksCount == 0),
+			require.Truef(t, (atomic.LoadInt32(&runZerroTasksCount) == 0),
 				"Нулевое значение запускает задачи на исполнение:", runZerroTasksCount)
 		})
 }
