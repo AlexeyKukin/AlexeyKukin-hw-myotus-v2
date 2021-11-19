@@ -102,9 +102,9 @@ func TestRun(t *testing.T) {
 			default:
 				return false
 			}
-		}, time.Second, time.Millisecond)
+		}, time.Second, time.Millisecond, "Задача не была завершена! Лимит исполнения истек!")
 
-		require.NoError(t, rErr)
+		require.NoError(t, rErr, "Получена ошибка:%v", rErr)
 		close(errCh)
 	})
 
