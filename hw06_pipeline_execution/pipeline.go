@@ -1,5 +1,7 @@
 package hw06pipelineexecution
 
+import "sync"
+
 type (
 	In  = <-chan interface{}
 	Out = In
@@ -17,7 +19,14 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 
 	*/
 	out := make(Bi)
-
+	wg := sync.WaitGroup{}
 	// Тут мы наконец то возвращаем наш канал из функции. В него мы будем передавать результат работы пайплайна
+
+	// Эта горутина ждет пока можно будет закрыть канал типа Out, который мы возвращаем из нашей функции для работы
+	go func() {
+		defer close(out)
+		wg.Wait()
+	}()
+
 	return out
 }
