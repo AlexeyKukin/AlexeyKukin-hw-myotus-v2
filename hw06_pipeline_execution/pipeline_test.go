@@ -14,9 +14,12 @@ const (
 )
 
 func TestPipeline(t *testing.T) {
-	// Stage generator
+	// Stage generator. Принимает строку и функцию, принимающую именованную переменную v типа пустой интерфейс,
+	// И возвращающую пустой интерфейс обратно. А возвращает тип Stage.
 	g := func(_ string, f func(v interface{}) interface{}) Stage {
+		//Возвращает функцию нужного нам типа Stage:
 		return func(in In) Out {
+			// Эта часть генерирует канал типа OUT возвращает его и наполняет в горутине результатами.
 			out := make(Bi)
 			go func() {
 				defer close(out)
@@ -25,6 +28,7 @@ func TestPipeline(t *testing.T) {
 					out <- f(v)
 				}
 			}()
+			// Вот тут возвращаем канал.
 			return out
 		}
 	}
@@ -49,6 +53,7 @@ func TestPipeline(t *testing.T) {
 
 		result := make([]string, 0, 10)
 		start := time.Now()
+		// Тут мы итерируемся по каналу Out, который возвращает ExecutePipeline
 		for s := range ExecutePipeline(in, nil, stages...) {
 			result = append(result, s.(string))
 		}
