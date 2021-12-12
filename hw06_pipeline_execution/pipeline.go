@@ -19,7 +19,6 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 
 func ifDone(in In, done In) Out {
 	out := make(Bi)
-
 	go func() {
 		for {
 			select {
