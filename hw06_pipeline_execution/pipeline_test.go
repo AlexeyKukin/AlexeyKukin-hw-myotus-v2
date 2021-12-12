@@ -39,11 +39,11 @@ func TestPipeline(t *testing.T) {
 		g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
 		g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
 	}
-
+	// Простой кейс
 	t.Run("simple case", func(t *testing.T) {
 		in := make(Bi)
 		data := []int{1, 2, 3, 4, 5}
-
+		// Эта горутина наполняет канал in
 		go func() {
 			for _, v := range data {
 				in <- v
@@ -53,7 +53,8 @@ func TestPipeline(t *testing.T) {
 
 		result := make([]string, 0, 10)
 		start := time.Now()
-		// Тут мы итерируемся по каналу Out, который возвращает ExecutePipeline
+		// Тут мы итерируемся по каналу Out, который возвращает ExecutePipeline это позволяет нам полностью дождаться пока канал
+		// out ExecutePipeline не будет закрыт
 		for s := range ExecutePipeline(in, nil, stages...) {
 			result = append(result, s.(string))
 		}

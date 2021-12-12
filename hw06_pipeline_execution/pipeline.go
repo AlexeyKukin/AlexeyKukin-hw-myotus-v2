@@ -1,7 +1,5 @@
 package hw06pipelineexecution
 
-import "sync"
-
 type (
 	In  = <-chan interface{}
 	Out = In
@@ -11,22 +9,33 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	/*
-		Канал in поступает нам на вход и содержит данные для обработки
-		Канал done у нас тоже передается параметром внутрь функции, при его закрытии, мы должны завершить работу.
-		Cтейджи передаются как []Stage
-		Нам необходимо вернуть канал Out, который нам нужно создать внутри нашей функции и закрыть по завершении работы
+	out := in
+	for _, i := range stages {
 
-	*/
+		out = ifDone(i(out), done)
+	}
+	return out
+}
+
+func ifDone(in In, done In) Out {
 	out := make(Bi)
-	wg := sync.WaitGroup{}
-	// Тут мы наконец то возвращаем наш канал из функции. В него мы будем передавать результат работы пайплайна
 
-	// Эта горутина ждет пока можно будет закрыть канал типа Out, который мы возвращаем из нашей функции для работы
 	go func() {
-		defer close(out)
-		wg.Wait()
+		for {
+			select {
+			case <-done:
+				{
+					close(out)
+					return
+				}
+			case a, ok := <-in:
+				if ok != true {
+					close(out)
+					return
+				}
+				out <- a
+			}
+		}
 	}()
-
 	return out
 }
