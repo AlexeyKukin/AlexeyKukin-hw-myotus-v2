@@ -11,7 +11,6 @@ type Stage func(in In) (out Out)
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	out := in
 	for _, i := range stages {
-
 		out = ifDone(i(out), done)
 	}
 	return out
@@ -28,7 +27,7 @@ func ifDone(in In, done In) Out {
 					return
 				}
 			case a, ok := <-in:
-				if ok != true {
+				if !ok {
 					close(out)
 					return
 				}
