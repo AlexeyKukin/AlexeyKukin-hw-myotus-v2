@@ -25,6 +25,7 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	return out
 }
 
+// Обрабатываем канал done.
 func ifDone(in In, done In) Out {
 	out := make(Bi)
 	go func() {
@@ -48,6 +49,8 @@ func ifDone(in In, done In) Out {
 	return out
 }
 
+// Функция просто выводящая значения в string без изменения. В случае если
+// стейджей не передали.
 func myDSS(in In) Out {
 	out := make(Bi)
 	go func() {
