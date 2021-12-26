@@ -1,5 +1,10 @@
 package hw06pipelineexecution
 
+import (
+	"strconv"
+	"time"
+)
+
 type (
 	In  = <-chan interface{}
 	Out = In
@@ -9,6 +14,51 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	// Place your code here.
-	return nil
+	out := in
+	if len(stages) == 0 {
+		out = ifDone(myDSS(out), done)
+	} else {
+		for _, i := range stages {
+			out = ifDone(i(out), done)
+		}
+	}
+	return out
+}
+
+// Обрабатываем канал done.
+func ifDone(in In, done In) Out {
+	out := make(Bi)
+	go func() {
+		for {
+			select {
+			case <-done:
+				{
+					close(out)
+					return
+				}
+			case a, ok := <-in:
+				if !ok {
+					close(out)
+					return
+				}
+				out <- a
+				//			default:
+			}
+		}
+	}()
+	return out
+}
+
+// Функция просто выводящая значения в string без изменения. В случае если
+// стейджей не передали.
+func myDSS(in In) Out {
+	out := make(Bi)
+	go func() {
+		defer close(out)
+		for v := range in {
+			time.Sleep(time.Millisecond * 100)
+			out <- strconv.Itoa(v.(int))
+		}
+	}()
+	return out
 }
